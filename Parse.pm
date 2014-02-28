@@ -21,9 +21,6 @@ sub looks_like_op {
   shift =~ m{^(eq|ne|gt|lt|==|!=|>=|>|<=|<|\+|-|\*|/|or|and|\|\||\s|&&|\(+|\)+)$};
 }
 
-sub looks_like_num {
-  shift =~ m{^\d+$};
-}
 
 #
 ## this too
@@ -71,15 +68,15 @@ sub parse_formula {
 
   return 1 if $formula eq 'default';
 
-  my @formula_parts = split( /(\b|\s|'.+')/, $formula );
+  my @formula_parts = split( /([\d.]+|\b|\s|'.+')/, $formula );
   my @evallable_formula;
   for ( @formula_parts ) {
-    chomp;
-    next unless length;
-    next if $_ eq ' ';
+    next unless length; # skip over blank entries from our split
+    #next if $_ eq ' ';
+    next if m/^\s+$/; # be a bit more explicit in removing blocks of whitespace
     $_ = '==' if $_ eq '=';
 
-    if ( not looks_like_num( $_ ) and not looks_like_op( $_ ) and not is_quoted( $_ ) ) {
+    if ( not looks_like_number( $_ ) and not looks_like_op( $_ ) and not is_quoted( $_ ) ) {
       # must be a slot name
       # TODO look up against the list of slots in the survey
       $_ = "\$session->get('$_')";

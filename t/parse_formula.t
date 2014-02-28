@@ -26,6 +26,7 @@ for (
   [ '(male_attendance  >= 90)', q{( $session->get('male_attendance') >= 90 )} ],
   [ "website = 'strategicdata.com.au'", q{$session->get('website') eq 'strategicdata.com.au'} ],
   [ 'default', 1 ],
+  [ '5 == 5.00', q{5 == 5.00}],
 ) {
   my ( $formula, $expected ) = @$_;
 
