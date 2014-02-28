@@ -72,7 +72,6 @@ sub parse_formula {
   my @evallable_formula;
   for ( @formula_parts ) {
     next unless length; # skip over blank entries from our split
-    #next if $_ eq ' ';
     next if m/^\s+$/; # be a bit more explicit in removing blocks of whitespace
     $_ = '==' if $_ eq '=';
 
@@ -87,7 +86,7 @@ sub parse_formula {
 
   $formula = join( ' ', @evallable_formula );
 
-  $formula =~ s/== '/eq '/g;
+  $formula =~ s/== '/eq '/g; # translate == to eq if the value to compare to starts with single quote
 
   return $formula;
 }

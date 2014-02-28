@@ -28,6 +28,8 @@ for (
   [ 'default', 1 ],
   [ '5 == 5.00', q{5 == 5.00}],
   [ q{'five' = 'FIVE'}, q{'five' eq 'FIVE'} ],
+  [ 'five = 5', q{$session->get('five') == 5} ],
+  [ q{five = 'five'}, q{$session->get('five') eq 'five'} ],
 ) {
   my ( $formula, $expected ) = @$_;
 
