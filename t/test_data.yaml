@@ -1,22 +1,22 @@
 ---
 # textfield: DISCUSS
-- website eq 'google.com': PAGE_002
+-PAGE_002:  website eq 'google.com'
 
 # select/choice/multichoice
-- why_choose_unilodge == 5: PAGE_003
-- why_choose_unilodge == 6: PAGE_004
+-PAGE_003:  why_choose_unilodge == 5
+-PAGE_004:  why_choose_unilodge == 6
 
 # int/float
-- female_attendance + male_attendance < 50: PAGE_007
-- male_attendance != 13: PAGE_008
-- female_attendance > 100: PAGE_009
+-PAGE_007:  female_attendance + male_attendance < 50
+-PAGE_008:  male_attendance != 13
+-PAGE_009:  female_attendance > 100
 
 # something more complicated
 # - ( ( female_attendance / ( female_attendance + male_attendance ) ) > 90 ) or ( ( male_attendance / ( female_attendance + male_attendance ) ) > 90 ): PAGE_010
 # NOTE: it still needs to be something that YAML can use as a hash key
 # so something more like this will work
-- female_attendance / total_attendance > .5 or male_attendance / total_attendance > .5 : PAGE_010
+-PAGE_010:  female_attendance / total_attendance > .5 or male_attendance / total_attendance > .5 
 # or better make a method of it:
-- female_percentage > 50 or male_percentage > 50 : PAGE_010
+-PAGE_010:  female_percentage > 50 or male_percentage > 50 
 
-- default: PAGE_005
+-PAGE_005:  default

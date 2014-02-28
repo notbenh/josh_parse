@@ -1,0 +1,22 @@
+---
+# select/choice/multichoice
+- PAGE_003:  why_choose_unilodge=5
+- PAGE_004:  why_choose_unilodge = 6
+
+# int/float
+- PAGE_007:  female_attendance + male_attendance > 50
+- PAGE_008:  male_attendance != 13
+- PAGE_009:  female_attendance < 1
+
+# something more complicated
+- PAGE_010:  ( ( ( female_attendance / ( female_attendance + male_attendance ) ) > 90 ) or ( ( male_attendance / ( female_attendance + male_attendance ) ) > 90 ) )
+- PAGE_010:  ( ( male_attendance / ( female_attendance + male_attendance ) ) > 90 )
+- PAGE_010:  ( female_attendance + male_attendance ) > 90
+- PAGE_010: (male_attendance  > 90)
+- PAGE_010: (male_attendance  >= 90)
+- PAGE_010: (male_attendance  >= 90)
+
+# textfield: DISCUSS
+- PAGE_011:  website = 'strategicdata.com.au'
+
+- PAGE_005:  default

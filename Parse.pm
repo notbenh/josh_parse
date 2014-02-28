@@ -1,6 +1,9 @@
 package Parse;
+
 use strict;
 use warnings;
+use feature ':5.10';
+
 use Data::Dumper; sub D(@){ warn Dumper @_ };
 use Scalar::Util qw{looks_like_number};
 use YAML ();
@@ -10,18 +13,24 @@ sub new {
   bless {@_}, $class;
 }
 
-sub default {1} # default should always return true
+#sub default {1} # default should always return true
+#
 
 # this could be so much better
 sub looks_like_op {
-  shift =~ m{^(?:eq|ne|gt|lt|==|!=|>=|>|<=|<|\+|-|\*|/|or|and|\|\||&&)$};
+  shift =~ m{^(eq|ne|gt|lt|==|!=|>=|>|<=|<|\+|-|\*|/|or|and|\|\||\s|&&|\(+|\)+)$};
 }
 
-# this too
-sub looks_like_code {
-  shift =~ m{^[()]$};
+sub looks_like_num {
+  shift =~ m{^\d+$};
 }
 
+#
+## this too
+#sub looks_like_code {
+#  shift =~ m{^[()]$};
+#}
+#
 # this too
 sub is_quoted {
   shift =~ m{^['"].*['"]$};
@@ -33,35 +42,69 @@ sub is_quoted {
 # with sloppier input
 sub parse {
   my $self = shift;
-  foreach my $data ( map{ref($_) eq 'ARRAY' ? @$_ : $_ } @_ ? @_ : @{$self->{data}} ){
-    foreach (keys %$data){
-      my $cmd = join ' '
-              , map{ $self->can($_)        ? $self->$_
-                   : looks_like_number($_) ? $_
-                   : looks_like_op($_)     ? $_
-                   : looks_like_code($_)   ? $_
-                   : is_quoted($_)         ? $_
-                   :                         qq{'$_'}
-                   }
-                split ' ', $_;
-      #warn "CMD: $cmd";
-      # NOTE: should trap warnings here
-      return $data->{$_} if eval $cmd;
-    }
+  foreach my $rule ( @{$self->{rules}} ){
+    my ( $page, $formula ) = each $rule;
+
+    #foreach (values %$rules){
+    #  my $cmd = join ' '
+    #          , map{ $self->can($_)        ? $self->$_
+    #               : looks_like_number($_) ? $_
+    #               : looks_like_op($_)     ? $_
+    #               : looks_like_code($_)   ? $_
+    #               : is_quoted($_)         ? $_
+    #               :                         qq{'$_'}
+    #               }
+    #            split ' ', $_;
+    #  #warn "CMD: $cmd";
+    #  # NOTE: should trap warnings here
+    #  return $rule->{$_} if eval $cmd;
+    #}
+
+    $formula = $self->parse_formula( $formula );
+    return $page if eval $formula;
   }
   return undef; 
 }
 
+sub parse_formula {
+  my ( $self, $formula ) = @_;
+
+  return 1 if $formula eq 'default';
+
+  my @formula_parts = split( /(\b|\s|'.+')/, $formula );
+  my @evallable_formula;
+  for ( @formula_parts ) {
+    chomp;
+    next unless length;
+    next if $_ eq ' ';
+    $_ = '==' if $_ eq '=';
+
+    if ( not looks_like_num( $_ ) and not looks_like_op( $_ ) and not is_quoted( $_ ) ) {
+      # must be a slot name
+      # TODO look up against the list of slots in the survey
+      $_ = "\$session->get('$_')";
+    }
+
+    push( @evallable_formula, $_ );
+  }
+
+  $formula = join( ' ', @evallable_formula );
+
+  $formula =~ s/== '/eq '/g;
+
+  return $formula;
+}
+
 sub parse_yaml {
   my $self = shift;
-  $self->{data} = YAML::Load(shift);
+  $self->{rules} = YAML::Load(shift);
   $self->parse;
 }
 
 sub parse_yaml_file {
   my $self = shift;
-  $self->{data} = YAML::LoadFile(shift);
-  $self->parse
+  $self->{rules} = YAML::LoadFile(shift);
+  $self->parse;
 }
 
 1;
