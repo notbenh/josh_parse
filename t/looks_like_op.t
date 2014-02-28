@@ -23,12 +23,3 @@ for (qw/
 
   ok( Parse::looks_like_op( $op ), $op );
 }
-
-__END__
-( ( male_attendance / ( female_attendance + male_attendance ) ) > 90 )
-( female_attendance + male_attendance ) > 90
-(male_attendance  > 90)
-(male_attendance  >= 90)
-(male_attendance  >= 90)
-website = 'strategicdata.com.au'
-default
