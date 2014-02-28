@@ -68,7 +68,7 @@ sub parse_formula {
 
   return 1 if $formula eq 'default';
 
-  my @formula_parts = split( /([\d.]+|\b|\s|'.+')/, $formula );
+  my @formula_parts = split( /([\d.]+|\b|\s|'[^']+')/, $formula );
   my @evallable_formula;
   for ( @formula_parts ) {
     next unless length; # skip over blank entries from our split

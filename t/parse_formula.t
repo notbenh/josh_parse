@@ -27,6 +27,7 @@ for (
   [ "website = 'strategicdata.com.au'", q{$session->get('website') eq 'strategicdata.com.au'} ],
   [ 'default', 1 ],
   [ '5 == 5.00', q{5 == 5.00}],
+  [ q{'five' = 'FIVE'}, q{'five' eq 'FIVE'} ],
 ) {
   my ( $formula, $expected ) = @$_;
 
