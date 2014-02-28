@@ -91,6 +91,26 @@ sub parse_formula {
   return $formula;
 }
 
+
+# should be a moose-like getter/setter rather than a default like this
+sub template { q{$session->get('%s')} }
+sub parse_formula_benish {
+  my ( $self, $formula ) = @_;
+
+  return 1 if $formula eq 'default';
+
+  my $cmd = join ' '                                                 # 4   : join all on space to build an eval-able statement
+          , map{ looks_like_number($_) ? $_                          # 3.1 : preserve anything that looks like a number
+               : looks_like_op($_)     ? $_                          # 3.2 : preserve anything that looks like an op
+               : is_quoted($_)         ? $_                          # 3.3 : preserve quoted formula parts
+               :                         sprintf($self->template,$_) # 3.4 : take each formula part and run it thru the template to do the actual lookup
+               } map{$_ eq '=' ? '==' : $_}                          # 2   : convert any case of a single = to == as no assignment is needed
+                 grep{length && ! m/^\s+$/}                          # 1   : ignore any part that is 'empty'
+                 split /([\d.]+|\b|\s|'[^']+')/, $formula;           # 0   : split the formula in to parts
+  $cmd =~ s/== '/eq '/g; # translate == to eq if the value to compare to starts with single quote
+  return $cmd;
+}
+
 sub parse_yaml {
   my $self = shift;
   $self->{rules} = YAML::Load(shift);

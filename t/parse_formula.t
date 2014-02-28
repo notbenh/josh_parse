@@ -11,6 +11,7 @@ use_ok 'Parse';
 ok my $p = Parse->new, q{can build an obj};
 
 can_ok( $p, 'parse_formula' );
+can_ok( $p, 'parse_formula_benish');
 
 for (
   # in    out
@@ -38,6 +39,7 @@ for (
     $expected,
     $formula,
   );
+  is_string($p->parse_formula_benish($formula),$expected,qq{BENISH: $formula});
 }
 
 __END__
