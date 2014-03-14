@@ -1,126 +1,122 @@
 package Parse;
-
 use strict;
 use warnings;
 use feature ':5.10';
-
-use Data::Dumper; sub D(@){ warn Dumper @_ };
 use Scalar::Util qw{looks_like_number};
-use YAML ();
 
 sub new {
   my $class = shift;
-  bless {@_}, $class;
+  return bless {@_}, $class;
+  # TODO: possibly store off the actual values as attr
+  #bless { #ops  => [qw{eq ne gt lt == != >= > <= < + - * / or || and && \s (+ )+}]
+  #      , #code => [qw{( )}]
+  #      , #quote=> [qw{' "}]
+  #      , @_
+  #      }, $class;
 }
 
-#sub default {1} # default should always return true
-#
+sub default {1} # default evaluation should always return true
 
-# this could be so much better
+# this could be so much better, is there a global list or can it use an
+# attribute so that the user can mod this list after init
 sub looks_like_op {
   shift =~ m{^(eq|ne|gt|lt|==|!=|>=|>|<=|<|\+|-|\*|/|or|and|\|\||\s|&&|\(+|\)+)$};
 }
 
-
-#
-## this too
-#sub looks_like_code {
-#  shift =~ m{^[()]$};
-#}
-#
-# this too
-sub is_quoted {
-  shift =~ m{^['"].*['"]$};
+# seems that this could be expanded but it is really dependnt on use
+sub looks_like_code {
+  shift =~ m{^[()]$};
 }
 
-# ideally takes an arrayref of hashes
-# also this is a single pass parse so you will want to quote everything
-# if you move to a repeat till fall out pass then you could get away
-# with sloppier input
-sub parse {
+# deals with match quotes but should really pull from an attr
+sub is_quoted { shift =~ /^(['"]).*\1$/ }
+
+
+=head2 parse
+Take an array of hashrefs (rule pairs) and return the first matching rule(key)
+
+  my $true = $p->parse({false=>0},{true=>1}); #'true'
+
+Each evaluation of the conditional is done by the value being passed to parse_to_eval and then evaled.
+
+=cut
+
+sub parse{
   my $self = shift;
-  foreach my $rule ( @{$self->{rules}} ){
-    my ( $page, $formula ) = each $rule;
-
-    #foreach (values %$rules){
-    #  my $cmd = join ' '
-    #          , map{ $self->can($_)        ? $self->$_
-    #               : looks_like_number($_) ? $_
-    #               : looks_like_op($_)     ? $_
-    #               : looks_like_code($_)   ? $_
-    #               : is_quoted($_)         ? $_
-    #               :                         qq{'$_'}
-    #               }
-    #            split ' ', $_;
-    #  #warn "CMD: $cmd";
-    #  # NOTE: should trap warnings here
-    #  return $rule->{$_} if eval $cmd;
-    #}
-
-    $formula = $self->parse_formula( $formula );
-    return $page if eval $formula;
+  foreach my $rule_pair (map{@$_}@_){
+    my ($rule,$conditional) = each $rule_pair;
+    return $rule if eval $self->parse_to_eval($conditional);
   }
-  return undef; 
+  return undef;
 }
 
-sub parse_formula {
-  my ( $self, $formula ) = @_;
 
-  return 1 if $formula eq 'default';
+# how to split up the conditional
+sub _conditional_split { shift;split /([\d.]+|\b|\s|'[^']+')/, shift }
+# any items from _conditional_split to ignore (white space and empty
+# strings by default)
+sub _conditional_ignore{ shift;grep{length && ! m/^\s+$/} @_ }
+# any forced alterations to make in the conditional (default is to
+# change any instance of a single = to == to allow for 5 = 4 to be valid
+sub _conditional_alter { shift;map{$_ eq '=' ? '==' : $_} @_ }
+# wrap up all _cond_* methods
+sub _conditional_parts {
+  my $self = shift;
+  $self->_conditional_alter(
+    $self->_conditional_ignore(
+      $self->_conditional_split(@_)
+    )
+  );
+}
 
-  my @formula_parts = split( /([\d.]+|\b|\s|'[^']+')/, $formula );
-  my @evallable_formula;
-  for ( @formula_parts ) {
-    next unless length; # skip over blank entries from our split
-    next if m/^\s+$/; # be a bit more explicit in removing blocks of whitespace
-    $_ = '==' if $_ eq '=';
+# how to decide if a part should be a look up and what to return
+sub _should_lookup { shift->can(shift) }
+sub _lookup {
+  my $self   = shift;
+  my $method = shift;
+  $self->$method(@_)
+}
 
-    if ( not looks_like_number( $_ ) and not looks_like_op( $_ ) and not is_quoted( $_ ) ) {
-      # must be a slot name
-      # TODO look up against the list of slots in the survey
-      $_ = "\$session->get('$_')";
+# a template to define how the final step of the parse to eval tree
+# should handle each part
+sub _conditional_template{ shift;sprintf q{'%s'}, shift; }
+
+# a hook to allow the compiled eval to be altered before it is actually
+# run, by default this will translate == to eq in the case where the
+# second value is quoted
+sub _eval_translate{
+  my $self = shift;
+  my $eval = shift;
+  $eval =~ s/== '/eq '/g;
+  return $eval;
+}
+
+
+=head2 parse_to_eval
+Takes a conditional and will return a string that can be evaluated. This is pulled out as it's own sub to allow for a subclass to overwrite this default.
+=cut
+
+# TODO: does it make any sense to have the order of this as some config attr?
+sub parse_to_eval {
+  my $self = shift;
+  my $cond = shift;
+  # this really should be a map as this is what they do
+  my @parts;
+  for my $part ($self->_conditional_parts($cond)){
+    if(  looks_like_number($part)
+      || looks_like_op($part)
+      || is_quoted($part)
+      ){ # passthru
+      push @parts, $part;
     }
-
-    push( @evallable_formula, $_ );
+    elsif( $self->_should_lookup($part)){
+      push @parts, $self->_lookup($part);
+    }
+    else {
+      push @parts, $self->_conditional_template($part);
+    }
   }
-
-  $formula = join( ' ', @evallable_formula );
-
-  $formula =~ s/== '/eq '/g; # translate == to eq if the value to compare to starts with single quote
-
-  return $formula;
-}
-
-
-# should be a moose-like getter/setter rather than a default like this
-sub template { q{$session->get('%s')} }
-sub parse_formula_benish {
-  my ( $self, $formula ) = @_;
-
-  return 1 if $formula eq 'default';
-
-  my $cmd = join ' '                                                 # 4   : join all on space to build an eval-able statement
-          , map{ looks_like_number($_) ? $_                          # 3.1 : preserve anything that looks like a number
-               : looks_like_op($_)     ? $_                          # 3.2 : preserve anything that looks like an op
-               : is_quoted($_)         ? $_                          # 3.3 : preserve quoted formula parts
-               :                         sprintf($self->template,$_) # 3.4 : take each formula part and run it thru the template to do the actual lookup
-               } map{$_ eq '=' ? '==' : $_}                          # 2   : convert any case of a single = to == as no assignment is needed
-                 grep{length && ! m/^\s+$/}                          # 1   : ignore any part that is 'empty'
-                 split /([\d.]+|\b|\s|'[^']+')/, $formula;           # 0   : split the formula in to parts
-  $cmd =~ s/== '/eq '/g; # translate == to eq if the value to compare to starts with single quote
-  return $cmd;
-}
-
-sub parse_yaml {
-  my $self = shift;
-  $self->{rules} = YAML::Load(shift);
-  $self->parse;
-}
-
-sub parse_yaml_file {
-  my $self = shift;
-  $self->{rules} = YAML::LoadFile(shift);
-  $self->parse;
+  return $self->_eval_translate(join ' ', @parts);
 }
 
 1;

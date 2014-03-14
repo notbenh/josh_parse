@@ -9,12 +9,13 @@ require_ok q{Parse};
 ok my $p = Parse->new, q{can build an obj};
 ok  Parse::looks_like_op('eq'), qq{eq op check};
 ok !Parse::looks_like_op('!!'), qq{!! op check};
-ok Parse::is_quoted(q{'123'}) , qq{123 quote check};
+ok  Parse::is_quoted(q{'123'}), qq{123 quote check};
 ok !Parse::is_quoted('eq')    , qq{eq quote check};
-is $p->parse([{0 => 'false', 1 => 'true'}]),'true', q{bool};
-is $p->parse([{0 => 'false', default => 'true'}]),'true',q{bool by default};
-is $p->parse([{'1 + 1 == 2' => 10}]), 10, qq{1+1==2};
+is $p->parse([{false => 0}, {true => 1}]),'true', q{bool};
+is $p->parse([{false => 0}, {true => default =>}]),'true',q{bool by default};
+is $p->parse([{10 => '1 + 1 == 2'}]), 10, qq{1+1==2};
 
+__END__
 require_ok q{Parse::Next};
 $p = Parse::Next->new;
 
